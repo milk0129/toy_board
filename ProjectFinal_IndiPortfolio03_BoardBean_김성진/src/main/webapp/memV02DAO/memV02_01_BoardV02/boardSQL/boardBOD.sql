@@ -17,7 +17,7 @@ CREATE TABLE BoardV02 (
     BOD_READCNT   NUMBER DEFAULT 0,                     -- 조회수
     BOD_CONNIP    VARCHAR2(20),                         -- 작성자 IP
     CONSTRAINT FK_BOD_WRITER FOREIGN KEY (BOD_WRITER)
-        REFERENCES BOARD_USERS(USER_ID)
+    REFERENCES BOARD_USERS(USER_ID)
 );
 
 -- 시퀀스 재생성

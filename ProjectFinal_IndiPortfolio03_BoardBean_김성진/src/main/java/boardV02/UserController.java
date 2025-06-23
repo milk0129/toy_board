@@ -111,6 +111,7 @@ public class UserController extends HttpServlet {
         dto.setUserName(userName);
         dto.setUserEmail(userEmail);
         dto.setUserBirth(userBirth);
+        dto.setProfileImg("default.png");
 
         UserDAO dao = new UserDAO();
 
@@ -224,12 +225,9 @@ public class UserController extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
 
-        // 파일 업로드 경로 준비
         String uploadPath = getServletContext().getRealPath("/profiles");
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) uploadDir.mkdir();
-
-        String userId = null, userPw = null, userEmail = null, profileImgFileName = null;
 
         try {
             MultipartRequest multi = new MultipartRequest(
@@ -240,70 +238,75 @@ public class UserController extends HttpServlet {
                 new DefaultFileRenamePolicy()
             );
 
-            userId = multi.getParameter("userId");
-            String rawPw = multi.getParameter("userPw");
-            userEmail = multi.getParameter("userEmail");
-            
+            String userId = multi.getParameter("userId");
+            String currentPw = multi.getParameter("currentPw");  // 기존 비밀번호
+            String newPw = multi.getParameter("newPw");          // 새 비밀번호
+            String userEmail = multi.getParameter("userEmail");
             String deleteImg = multi.getParameter("deleteProfileImg");
+
+            // 현재 비밀번호 검증
+            UserDAO dao = new UserDAO();
+            if (!dao.loginCheck(userId, currentPw)) {
+                request.setAttribute("msg", "❗ 현재 비밀번호가 일치하지 않습니다.");
+                request.setAttribute("location", request.getContextPath() + "/UserController?action=userEditForm");
+                RequestDispatcher rd = request.getRequestDispatcher("/memV02DAO/memV02_01_BoardV02/boardFrame/msgChk.jsp");
+                rd.forward(request, response);
+                return;
+            }
+
+            String profileImgFileName = null;
+
             if ("true".equals(deleteImg)) {
                 profileImgFileName = "default.png";
             } else {
                 File profileImg = multi.getFile("newProfileImg");
                 if (profileImg != null) {
-                    profileImgFileName = profileImg.getName();
+                    String fileName = profileImg.getName();
+                    String lowerFileName = fileName.toLowerCase();
+
+                    if (lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg") ||
+                        lowerFileName.endsWith(".png") || lowerFileName.endsWith(".gif") ||
+                        lowerFileName.endsWith(".webp")) {
+                        profileImgFileName = fileName;
+                    } else {
+                        profileImg.delete();  // 확장자 안맞으면 삭제
+                        request.setAttribute("msg", "❗ 이미지 파일(jpg, png, gif, webp)만 업로드 가능합니다.");
+                        request.setAttribute("location", request.getContextPath() + "/UserController?action=userEditForm");
+                        RequestDispatcher rd = request.getRequestDispatcher("/memV02DAO/memV02_01_BoardV02/boardFrame/msgChk.jsp");
+                        rd.forward(request, response);
+                        return;
+                    }
                 }
             }
-            // 비밀번호 입력 여부에 따라 null 처리
-            userPw = (rawPw != null && !rawPw.trim().isEmpty()) ? rawPw.trim() : null;
 
-            File profileImg = multi.getFile("newProfileImg");
-            if (profileImg != null) {
-                String fileName = profileImg.getName();
-                String lowerFileName = fileName.toLowerCase();
-
-                if (lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg") ||
-                    lowerFileName.endsWith(".png") || lowerFileName.endsWith(".gif") ||
-                    lowerFileName.endsWith(".webp")) {
-                    profileImgFileName = fileName;  // 확장자 OK
-                } else {
-                    // 유효하지 않은 확장자일 경우 파일 삭제 및 오류 처리
-                    profileImg.delete();
-                    request.setAttribute("msg", "❗ 이미지 파일(jpg, png, gif, webp)만 업로드 가능합니다.");
-                    request.setAttribute("location", request.getContextPath() + "/UserController?action=userEditForm");
-                    RequestDispatcher rd = request.getRequestDispatcher("/memV02DAO/memV02_01_BoardV02/boardFrame/msgChk.jsp");
-                    rd.forward(request, response);
-                    return;
-                }
+            if (profileImgFileName == null || profileImgFileName.trim().isEmpty()) {
+                profileImgFileName = "default.png";
             }
 
             UserDTO dto = new UserDTO();
             dto.setUserId(userId);
             dto.setUserEmail(userEmail);
-            dto.setProfileImg(profileImgFileName);  // null일 수도 있음
+            dto.setProfileImg(profileImgFileName);
 
-            if (userPw != null) {
-                dto.setUserPw(userPw);  // 비밀번호 입력된 경우만 설정
+            if (newPw != null && !newPw.trim().isEmpty()) {
+                dto.setUserPw(newPw.trim());
             }
 
-            UserDAO dao = new UserDAO();
             int result = dao.updateUserProfile(dto);
 
             if (result > 0) {
-                // 업데이트 성공 시 다시 최신 정보로 설정
                 UserDTO updatedUser = dao.getUser(userId);
                 HttpSession session = request.getSession();
-                
                 session.setAttribute("loginUser", updatedUser);
                 session.setAttribute("userId", updatedUser.getUserId());
                 session.setAttribute("userName", updatedUser.getUserName());
 
-                request.setAttribute("userId", updatedUser.getUserId());
-                request.setAttribute("userName", updatedUser.getUserName());
-                request.setAttribute("profileImg", updatedUser.getProfileImg());
                 response.sendRedirect("BoardController?action=list");
             } else {
                 request.setAttribute("msg", "수정 실패");
-                request.getRequestDispatcher("/memV02DAO/memV02_01_BoardV02/boardFrame/userEdit.jsp").forward(request, response);
+                request.setAttribute("location", request.getContextPath() + "/UserController?action=userEditForm");
+                RequestDispatcher rd = request.getRequestDispatcher("/memV02DAO/memV02_01_BoardV02/boardFrame/msgChk.jsp");
+                rd.forward(request, response);
             }
 
         } catch (Exception e) {

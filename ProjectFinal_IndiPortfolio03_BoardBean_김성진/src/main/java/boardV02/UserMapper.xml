@@ -14,8 +14,8 @@
   
   <!-- 회원가입 -->
   <insert id="insertUser" parameterType="boardV02.UserDTO">
-    INSERT INTO BOARD_USERS (USER_ID, USER_PW, USER_NAME, USER_BIRTH, USER_EMAIL)
-    VALUES (#{userId}, #{userPw}, #{userName}, #{userBirth}, #{userEmail})
+    INSERT INTO BOARD_USERS (USER_ID, USER_PW, USER_NAME, USER_BIRTH, USER_EMAIL, PROFILE_IMG)
+    VALUES (#{userId}, #{userPw}, #{userName}, #{userBirth}, #{userEmail}, #{profileImg})
   </insert>
 
   <!-- 로그인 확인 (boolean용) -->

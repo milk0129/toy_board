@@ -45,11 +45,11 @@
         </tr>
         <tr>
           <td>현재 비밀번호</td>
-          <td><input type="password" name="userPw" id="pw" required></td>
+          <td><input type="password" name="currentPw" id="pw" required></td>
         </tr>
         <tr>
           <td>새 비밀번호</td>
-          <td><input type="password" name="userPw" id="newPw"></td>
+          <td><input type="password" name="newPw" id="newPw"></td>
         </tr>
         <tr>
           <td>비밀번호 확인</td>
